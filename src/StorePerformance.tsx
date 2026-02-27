@@ -11,10 +11,14 @@ type StoreRow = {
   orders_past_month: number;
   cancelled_current_month: number;
   cancelled_last_month: number;
+  units_current_month: number;
+  units_last_month: number;
+  subbed_units_current_month: number;
+  subbed_units_last_month: number;
 };
 
 const STORES_API_URL = 'https://5jy6w3zatafifkvkoy64b66ntm0vlirq.lambda-url.ap-southeast-2.on.aws/';
-const STORES_CACHE_KEY = 'store_performance_cache_v1';
+const STORES_CACHE_KEY = 'store_performance_cache_v2';
 const STORES_CACHE_TTL_MS = 30 * 60 * 1000;
 
 function StorePerformance() {
@@ -24,7 +28,14 @@ function StorePerformance() {
   const [error, setError] = useState<string>('');
   const [selectedState, setSelectedState] = useState<string>('All');
   const [sortKey, setSortKey] = useState<
-    'store_code' | 'orders_total' | 'orders_trend' | 'cancelled_total' | 'cancelled_trend' | null
+    | 'store_code'
+    | 'orders_total'
+    | 'orders_trend'
+    | 'found_rate_total'
+    | 'found_rate_trend'
+    | 'cancelled_total'
+    | 'cancelled_trend'
+    | null
   >(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -58,6 +69,32 @@ function StorePerformance() {
     return Number(value.toFixed(4));
   };
 
+  const getFoundRate = (unitsCurrent: number, subbedUnitsCurrent: number) => {
+    if (!Number.isFinite(unitsCurrent) || unitsCurrent <= 0) return 0;
+    if (!Number.isFinite(subbedUnitsCurrent)) return 0;
+    return (unitsCurrent - subbedUnitsCurrent) / unitsCurrent;
+  };
+
+  const getFoundRateTrend = (currentRate: number, previousRate: number) => {
+    if (previousRate === 0) {
+      if (currentRate === 0) {
+        return { label: '0%', direction: 'flat' as const, isGood: true, isNew: false };
+      }
+      return { label: 'New', direction: 'up' as const, isGood: true, isNew: true };
+    }
+    const diff = ((currentRate - previousRate) / previousRate) * 100;
+    const direction = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+    return { label: `${Math.abs(diff).toFixed(1)}%`, direction, isGood: diff > 0, isNew: false };
+  };
+
+  const getFoundRateTrendDecimal = (currentRate: number, previousRate: number) => {
+    if (previousRate === 0) {
+      return currentRate === 0 ? 0 : 'NEW';
+    }
+    const value = (currentRate - previousRate) / previousRate;
+    return Number(value.toFixed(4));
+  };
+
   const handleDownloadCsv = () => {
     const header = [
       'store_code',
@@ -69,7 +106,10 @@ function StorePerformance() {
       'orders_trend_decimal',
       'cancelled_current_month',
       'cancelled_last_month',
-      'cancelled_trend_decimal'
+      'cancelled_trend_decimal',
+      'found_rate_current_month',
+      'found_rate_last_month',
+      'found_rate_trend'
     ];
 
     const rows = sortedStores.map((store) => [
@@ -82,7 +122,13 @@ function StorePerformance() {
       getTrendDecimal(store.orders_current_month, store.orders_past_month),
       store.cancelled_current_month,
       store.cancelled_last_month,
-      getTrendDecimal(store.cancelled_current_month, store.cancelled_last_month, true)
+      getTrendDecimal(store.cancelled_current_month, store.cancelled_last_month, true),
+      Number(getFoundRate(store.units_current_month, store.subbed_units_current_month).toFixed(4)),
+      Number(getFoundRate(store.units_last_month, store.subbed_units_last_month).toFixed(4)),
+      getFoundRateTrendDecimal(
+        getFoundRate(store.units_current_month, store.subbed_units_current_month),
+        getFoundRate(store.units_last_month, store.subbed_units_last_month)
+      )
     ]);
 
     const escapeCell = (value: string | number) => {
@@ -155,7 +201,11 @@ function StorePerformance() {
             orders_current_month: Number(row?.orders_current_month ?? 0),
             orders_past_month: Number(row?.orders_past_month ?? 0),
             cancelled_current_month: Number(row?.cancelled_current_month ?? 0),
-            cancelled_last_month: Number(row?.cancelled_last_month ?? 0)
+            cancelled_last_month: Number(row?.cancelled_last_month ?? 0),
+            units_current_month: Number(row?.units_current_month ?? 0),
+            units_last_month: Number(row?.units_last_month ?? 0),
+            subbed_units_current_month: Number(row?.subbed_units_current_month ?? 0),
+            subbed_units_last_month: Number(row?.subbed_units_last_month ?? 0)
           }));
 
         setStores(cleaned);
@@ -189,6 +239,12 @@ function StorePerformance() {
       const bOrdersTrend = formatTrend(b.orders_current_month, b.orders_past_month).trendPct;
       const aCancelledTrend = formatTrend(a.cancelled_current_month, a.cancelled_last_month, true).trendPct;
       const bCancelledTrend = formatTrend(b.cancelled_current_month, b.cancelled_last_month, true).trendPct;
+      const aFoundRate = getFoundRate(a.units_current_month, a.subbed_units_current_month);
+      const bFoundRate = getFoundRate(b.units_current_month, b.subbed_units_current_month);
+      const aFoundRateLast = getFoundRate(a.units_last_month, a.subbed_units_last_month);
+      const bFoundRateLast = getFoundRate(b.units_last_month, b.subbed_units_last_month);
+      const aFoundRateTrend = getFoundRateTrendDecimal(aFoundRate, aFoundRateLast);
+      const bFoundRateTrend = getFoundRateTrendDecimal(bFoundRate, bFoundRateLast);
       if (sortKey === 'store_code') {
         const aCode = Number(a.store_code);
         const bCode = Number(b.store_code);
@@ -206,6 +262,10 @@ function StorePerformance() {
           ? a.orders_current_month
           : sortKey === 'orders_trend'
           ? aOrdersTrend
+          : sortKey === 'found_rate_total'
+          ? aFoundRate
+          : sortKey === 'found_rate_trend'
+          ? (aFoundRateTrend === 'NEW' ? Number.POSITIVE_INFINITY : aFoundRateTrend)
           : sortKey === 'cancelled_total'
           ? a.cancelled_current_month
           : aCancelledTrend;
@@ -214,6 +274,10 @@ function StorePerformance() {
           ? b.orders_current_month
           : sortKey === 'orders_trend'
           ? bOrdersTrend
+          : sortKey === 'found_rate_total'
+          ? bFoundRate
+          : sortKey === 'found_rate_trend'
+          ? (bFoundRateTrend === 'NEW' ? Number.POSITIVE_INFINITY : bFoundRateTrend)
           : sortKey === 'cancelled_total'
           ? b.cancelled_current_month
           : bCancelledTrend;
@@ -328,7 +392,6 @@ function StorePerformance() {
                         </span>
                       </button>
                     </th>
-                    <th>Store ID</th>
                     <th>Store Name</th>
                     <th>
                       <button
@@ -412,6 +475,47 @@ function StorePerformance() {
                         </span>
                       </button>
                     </th>
+                    <th className="found-rate-cell">
+                      <button
+                        type="button"
+                        className={`sortable-header ${sortKey === 'found_rate_total' ? 'active' : ''}`}
+                        onClick={() => {
+                          if (sortKey === 'found_rate_total') {
+                            setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                          } else {
+                            setSortKey('found_rate_total');
+                            setSortDirection('desc');
+                          }
+                        }}
+                      >
+                        <span className="header-text">
+                          <span className="header-title">Found Rate</span>
+                          <span className="header-subtitle">This Month</span>
+                        </span>
+                        <span className="sort-indicator">
+                          {sortKey === 'found_rate_total' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                        </span>
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        type="button"
+                        className={`sortable-header ${sortKey === 'found_rate_trend' ? 'active' : ''}`}
+                        onClick={() => {
+                          if (sortKey === 'found_rate_trend') {
+                            setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                          } else {
+                            setSortKey('found_rate_trend');
+                            setSortDirection('desc');
+                          }
+                        }}
+                      >
+                        Found Rate Trend
+                        <span className="sort-indicator">
+                          {sortKey === 'found_rate_trend' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                        </span>
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -429,40 +533,72 @@ function StorePerformance() {
                       return (
                     <tr key={`${store.store_code}-${store.store_id}`}>
                       <td>{store.store_code}</td>
-                      <td>{store.store_id}</td>
-                      <td>{store.name}</td>
-                      <td className="store-table-number">
-                        <div className="metric-cell">
-                          <span className="metric-value">{store.orders_current_month}</span>
-                        </div>
-                      </td>
-                      <td className="store-table-trend">
-                        <div className="metric-cell">
-                          <span className={`trend-chip ${ordersTrend.direction} ${ordersTrend.isNew ? 'new' : ordersTrend.isGood ? 'good' : 'bad'}`}>
-                            <span className="trend-icon">
-                              {ordersTrend.direction === 'up' ? '▲' : ordersTrend.direction === 'down' ? '▼' : '•'}
-                            </span>
-                            {ordersTrend.label}
+                    <td>{store.name}</td>
+                    <td className="store-table-number">
+                      <div className="metric-cell">
+                        <span className="metric-value">{store.orders_current_month}</span>
+                      </div>
+                    </td>
+                    <td className="store-table-trend">
+                      <div className="metric-cell">
+                        <span className={`trend-chip ${ordersTrend.direction} ${ordersTrend.isNew ? 'new' : ordersTrend.isGood ? 'good' : 'bad'}`}>
+                          <span className="trend-icon">
+                            {ordersTrend.direction === 'up' ? '▲' : ordersTrend.direction === 'down' ? '▼' : '•'}
                           </span>
-                          <span className="trend-subtext">Last month: {store.orders_past_month}</span>
-                        </div>
-                      </td>
-                      <td className="store-table-number">
-                        <div className="metric-cell">
-                          <span className="metric-value">{store.cancelled_current_month}</span>
-                        </div>
-                      </td>
-                      <td className="store-table-trend">
-                        <div className="metric-cell">
-                          <span className={`trend-chip ${cancelledTrend.direction} ${cancelledTrend.isNew ? 'new' : cancelledTrend.isGood ? 'good' : 'bad'}`}>
-                            <span className="trend-icon">
-                              {cancelledTrend.direction === 'up' ? '▲' : cancelledTrend.direction === 'down' ? '▼' : '•'}
-                            </span>
-                            {cancelledTrend.label}
+                          {ordersTrend.label}
+                        </span>
+                        <span className="trend-subtext">Last month: {store.orders_past_month}</span>
+                      </div>
+                    </td>
+                    <td className="store-table-number">
+                      <div className="metric-cell">
+                        <span className="metric-value">{store.cancelled_current_month}</span>
+                      </div>
+                    </td>
+                    <td className="store-table-trend">
+                      <div className="metric-cell">
+                        <span className={`trend-chip ${cancelledTrend.direction} ${cancelledTrend.isNew ? 'new' : cancelledTrend.isGood ? 'good' : 'bad'}`}>
+                          <span className="trend-icon">
+                            {cancelledTrend.direction === 'up' ? '▲' : cancelledTrend.direction === 'down' ? '▼' : '•'}
                           </span>
-                          <span className="trend-subtext">Last month: {store.cancelled_last_month}</span>
-                        </div>
-                      </td>
+                          {cancelledTrend.label}
+                        </span>
+                        <span className="trend-subtext">Last month: {store.cancelled_last_month}</span>
+                      </div>
+                    </td>
+                    <td className="store-table-number found-rate-cell">
+                      <div className="metric-cell">
+                        <span className="metric-value">
+                          {(getFoundRate(store.units_current_month, store.subbed_units_current_month) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="store-table-trend">
+                      <div className="metric-cell">
+                        {(() => {
+                          const currentRate = getFoundRate(
+                            store.units_current_month,
+                            store.subbed_units_current_month
+                          );
+                          const lastRate = getFoundRate(
+                            store.units_last_month,
+                            store.subbed_units_last_month
+                          );
+                          const foundTrend = getFoundRateTrend(currentRate, lastRate);
+                          return (
+                            <>
+                              <span className={`trend-chip ${foundTrend.direction} ${foundTrend.isNew ? 'new' : foundTrend.isGood ? 'good' : 'bad'}`}>
+                                <span className="trend-icon">
+                                  {foundTrend.direction === 'up' ? '▲' : foundTrend.direction === 'down' ? '▼' : '•'}
+                                </span>
+                                {foundTrend.label}
+                              </span>
+                              <span className="trend-subtext">Last month: {(lastRate * 100).toFixed(1)}%</span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </td>
                     </tr>
                       );
                     })()

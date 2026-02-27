@@ -244,8 +244,8 @@
 }
 
 .store-performance-content {
-  max-width: 1320px;
-  width: min(96vw, 1320px);
+  max-width: 1440px;
+  width: min(98vw, 1440px);
   padding: 3rem 2.5rem;
 }
 
@@ -316,14 +316,14 @@
 
 .store-table-scroll {
   max-height: 70vh;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .store-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
-  min-width: 860px;
 }
 
 .store-table th,
@@ -403,6 +403,16 @@
   background-color: #eff6ff;
 }
 
+.store-table td:nth-child(2) {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.store-table td.found-rate-cell,
+.store-table th.found-rate-cell {
+  background-color: #f4fbf6;
+}
+
 .store-table-number {
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -476,6 +486,7 @@
   margin-top: 0.4rem;
   font-size: 0.76rem;
   color: #64748b;
+  text-align: center;
 }
 
 .table-pagination {
