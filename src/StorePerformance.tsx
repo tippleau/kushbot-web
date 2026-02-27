@@ -49,11 +49,12 @@ function StorePerformance() {
     return { label: `${Math.abs(diff).toFixed(1)}%`, direction, isGood, isNew: false, trendPct: diff };
   };
 
-  const getTrendDecimal = (current: number, previous: number) => {
+  const getTrendDecimal = (current: number, previous: number, invertGoodness = false) => {
     if (previous === 0) {
       return current === 0 ? 0 : 'NEW';
     }
-    const value = (current - previous) / previous;
+    const raw = (current - previous) / previous;
+    const value = invertGoodness ? -raw : raw;
     return Number(value.toFixed(4));
   };
 
@@ -81,7 +82,7 @@ function StorePerformance() {
       getTrendDecimal(store.orders_current_month, store.orders_past_month),
       store.cancelled_current_month,
       store.cancelled_last_month,
-      getTrendDecimal(store.cancelled_current_month, store.cancelled_last_month)
+      getTrendDecimal(store.cancelled_current_month, store.cancelled_last_month, true)
     ]);
 
     const escapeCell = (value: string | number) => {
