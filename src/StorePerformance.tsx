@@ -49,6 +49,64 @@ function StorePerformance() {
     return { label: `${Math.abs(diff).toFixed(1)}%`, direction, isGood, isNew: false, trendPct: diff };
   };
 
+  const getTrendDecimal = (current: number, previous: number) => {
+    if (previous === 0) {
+      return current === 0 ? 0 : 'NEW';
+    }
+    const value = (current - previous) / previous;
+    return Number(value.toFixed(4));
+  };
+
+  const handleDownloadCsv = () => {
+    const header = [
+      'store_code',
+      'store_id',
+      'name',
+      'state',
+      'orders_current_month',
+      'orders_past_month',
+      'orders_trend_decimal',
+      'cancelled_current_month',
+      'cancelled_last_month',
+      'cancelled_trend_decimal'
+    ];
+
+    const rows = sortedStores.map((store) => [
+      store.store_code,
+      store.store_id,
+      store.name,
+      store.state,
+      store.orders_current_month,
+      store.orders_past_month,
+      getTrendDecimal(store.orders_current_month, store.orders_past_month),
+      store.cancelled_current_month,
+      store.cancelled_last_month,
+      getTrendDecimal(store.cancelled_current_month, store.cancelled_last_month)
+    ]);
+
+    const escapeCell = (value: string | number) => {
+      const str = String(value ?? '');
+      if (/[",\n]/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csvContent = [header, ...rows].map((row) => row.map(escapeCell).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const unixTime = Math.floor(Date.now() / 1000);
+    const stateSuffix = selectedState.toLowerCase().replace(/\s+/g, '-');
+    link.href = url;
+    link.download = `store-performance-${stateSuffix}-${timestamp}-${unixTime}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     const fetchStores = async () => {
       try {
@@ -223,22 +281,28 @@ function StorePerformance() {
               <span>
                 {filteredStores.length} stores
               </span>
-              <label className="store-filter">
-                <span>State</span>
-                <select
-                  value={selectedState}
-                  onChange={(e) => setSelectedState(e.target.value)}
-                >
-                  <option value="All">All</option>
-                  {Array.from(new Set(stores.map((s) => s.state).filter(Boolean)))
-                    .sort()
-                    .map((state) => (
-                      <option key={state} value={state}>
-                        {state}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              <div className="store-table-actions">
+                <button type="button" className="download-button" onClick={handleDownloadCsv}>
+                  <span className="download-icon" aria-hidden="true">⬇︎</span>
+                  Download CSV
+                </button>
+                <label className="store-filter">
+                  <span>State</span>
+                  <select
+                    value={selectedState}
+                    onChange={(e) => setSelectedState(e.target.value)}
+                  >
+                    <option value="All">All</option>
+                    {Array.from(new Set(stores.map((s) => s.state).filter(Boolean)))
+                      .sort()
+                      .map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </div>
             </div>
             <div className="store-table-scroll">
               <table className="store-table">
