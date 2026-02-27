@@ -14,12 +14,21 @@ function App() {
         <h1>Kush B🤖t</h1>
         <p>Please select what you want to do from the list below.</p>
         <nav className="navbar">
-          <ul className="menu">
-            <li className="menu-item"><a onClick={() => navigate('/range-refresh')}>🍩 Upload Range Refresh Files</a></li>
-            <li className="menu-item"><a onClick={() => navigate('/bonus-buy')}>📁 Upload Monthly Bonus Buy File</a></li>
-            <li className="menu-item"><a onClick={() => navigate('/summit')}>🏪 Upload Monthly Summit File</a></li>
-            <li className="menu-item"><a onClick={() => navigate('/monthly-promo-plan')}>🏷️ Upload Monthly Promo Plan File</a></li>
-          </ul>
+          <div className="menu-group">
+            <h2 className="menu-heading">Uploads</h2>
+            <ul className="menu">
+              <li className="menu-item"><a onClick={() => navigate('/range-refresh')}>🍩 Upload Range Refresh Files</a></li>
+              <li className="menu-item"><a onClick={() => navigate('/bonus-buy')}>📁 Upload Monthly Bonus Buy File</a></li>
+              <li className="menu-item"><a onClick={() => navigate('/summit')}>🏪 Upload Monthly Summit File</a></li>
+              <li className="menu-item"><a onClick={() => navigate('/monthly-promo-plan')}>🏷️ Upload Monthly Promo Plan File</a></li>
+            </ul>
+          </div>
+          <div className="menu-group">
+            <h2 className="menu-heading">Insights</h2>
+            <ul className="menu">
+              <li className="menu-item"><a onClick={() => navigate('/store-performance')}>📊 Store Performance</a></li>
+            </ul>
+          </div>
         </nav>
       </main>
     </div>
