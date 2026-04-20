@@ -244,9 +244,9 @@
 }
 
 .store-performance-content {
-  max-width: 1440px;
-  width: min(98vw, 1440px);
-  padding: 3rem 2.5rem;
+  max-width: 1800px;
+  width: min(98vw, 1800px);
+  padding: 3rem 1.5rem;
 }
 
 .store-table-wrapper {
@@ -329,11 +329,24 @@
 .store-table th,
 .store-table td {
   text-align: left;
-  padding: 1rem 1.25rem;
+  padding: 0.6rem 0.9rem;
   border-bottom: 1px solid rgba(226, 232, 240, 0.7);
-  font-size: 0.97rem;
+  font-size: 0.9rem;
   color: #0f172a;
 }
+
+.store-table td {
+  white-space: nowrap;
+}
+
+.store-table th {
+  white-space: normal;
+  min-width: 100px;
+  vertical-align: bottom;
+}
+
+.store-table th:nth-child(1) { min-width: 80px; }
+.store-table th:nth-child(2) { min-width: 180px; }
 
 .store-table th {
   background: #f8fafc;
@@ -404,8 +417,9 @@
 }
 
 .store-table td:nth-child(2) {
-  white-space: normal;
-  word-break: break-word;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .store-table td.found-rate-cell,
@@ -414,31 +428,28 @@
 }
 
 .store-table-number {
-  text-align: center;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-.store-table-trend {
-  text-align: center;
-}
-
 .metric-cell {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
 }
 
 .trend-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.65rem;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.2px;
+  cursor: default;
 }
 
 .trend-chip.up {
