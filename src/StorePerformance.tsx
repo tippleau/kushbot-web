@@ -95,6 +95,39 @@ function toSortableNumber(value: string): number {
   return Number.isNaN(num) ? -1 : num;
 }
 
+function toMetricNumber(value: string): number {
+  if (!value || value === '-') return 0;
+  const num = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(num) ? num : 0;
+}
+
+function parsePackingTimeToMinutes(value: string): number | null {
+  if (!value || value === '-') return null;
+  const normalized = String(value).toLowerCase().trim();
+
+  const minSecMatch = normalized.match(/(?:(\d+(?:\.\d+)?)\s*m)?\s*(?:(\d+(?:\.\d+)?)\s*s)?/);
+  if (minSecMatch && (minSecMatch[1] || minSecMatch[2])) {
+    const mins = minSecMatch[1] ? parseFloat(minSecMatch[1]) : 0;
+    const secs = minSecMatch[2] ? parseFloat(minSecMatch[2]) : 0;
+    if (Number.isFinite(mins) && Number.isFinite(secs)) {
+      return mins + secs / 60;
+    }
+  }
+
+  const fallback = parseFloat(normalized.replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(fallback) ? fallback : null;
+}
+
+function calculateMedian(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  return sorted[mid];
+}
+
 function extractTrendLabel(text: string): string {
   if (!text) return '–';
   const pctMatch = text.match(/^(\d+\.?\d*%)/);
@@ -102,6 +135,13 @@ function extractTrendLabel(text: string): string {
   const ptsMatch = text.match(/^(\d+\.?\d*)\s+points/);
   if (ptsMatch) return `${ptsMatch[1]} pts`;
   return '–';
+}
+
+function splitValueAndUnit(value: string): { main: string; unit: string } {
+  const trimmed = String(value ?? '').trim();
+  const match = trimmed.match(/^([0-9][0-9,]*(?:\.[0-9]+)?)(.*)$/);
+  if (!match) return { main: trimmed, unit: '' };
+  return { main: match[1], unit: match[2].trim() };
 }
 
 function StorePerformance() {
@@ -223,6 +263,89 @@ function StorePerformance() {
     () => stores.filter((store) => selectedState === 'All' || store.state === selectedState),
     [stores, selectedState]
   );
+
+  const insightCards = useMemo(() => {
+    const totalOrders = filteredStores.reduce((sum, store) => sum + toMetricNumber(store.total_orders), 0);
+    const cancelledOrders = filteredStores.reduce((sum, store) => sum + toMetricNumber(store.cancelled_orders), 0);
+    const substitutedOrders = filteredStores.reduce((sum, store) => sum + toMetricNumber(store.substituted_orders), 0);
+
+    const weightedFoundRate = filteredStores.reduce(
+      (acc, store) => {
+        const orders = toMetricNumber(store.total_orders);
+        const foundRate = toMetricNumber(store.found_rate);
+        if (orders > 0 && Number.isFinite(foundRate)) {
+          acc.weightedSum += foundRate * orders;
+          acc.totalWeight += orders;
+        }
+        return acc;
+      },
+      { weightedSum: 0, totalWeight: 0 }
+    );
+    const avgFoundRate =
+      weightedFoundRate.totalWeight > 0 ? weightedFoundRate.weightedSum / weightedFoundRate.totalWeight : 0;
+    const foundRateMedian = calculateMedian(
+      filteredStores
+        .filter((store) => toMetricNumber(store.total_orders) > 0)
+        .map((store) => toMetricNumber(store.found_rate))
+        .filter((value) => Number.isFinite(value))
+    );
+
+    const weightedPackingTime = filteredStores.reduce(
+      (acc, store) => {
+        const orders = toMetricNumber(store.total_orders);
+        const minutes = parsePackingTimeToMinutes(store.avg_packing_time);
+        if (orders > 0 && minutes !== null) {
+          acc.weightedSum += minutes * orders;
+          acc.totalWeight += orders;
+        }
+        return acc;
+      },
+      { weightedSum: 0, totalWeight: 0 }
+    );
+    const avgPackingTime =
+      weightedPackingTime.totalWeight > 0 ? weightedPackingTime.weightedSum / weightedPackingTime.totalWeight : 0;
+    const packingTimeMedian = calculateMedian(
+      filteredStores
+        .filter((store) => toMetricNumber(store.total_orders) > 0)
+        .map((store) => parsePackingTimeToMinutes(store.avg_packing_time))
+        .filter((value): value is number => value !== null && Number.isFinite(value))
+    );
+
+    const cancellationRate = totalOrders > 0 ? (cancelledOrders / totalOrders) * 100 : 0;
+    const substitutionRate = totalOrders > 0 ? (substitutedOrders / totalOrders) * 100 : 0;
+
+    return [
+      {
+        label: 'Total Orders',
+        value: Math.round(totalOrders).toLocaleString(),
+        tone: 'cyan',
+      },
+      {
+        label: 'Cancelled Orders',
+        value: Math.round(cancelledOrders).toLocaleString(),
+        hint: `${cancellationRate.toFixed(1)}% of total`,
+        tone: 'rose',
+      },
+      {
+        label: 'Substituted Orders',
+        value: Math.round(substitutedOrders).toLocaleString(),
+        hint: `${substitutionRate.toFixed(1)}% of total`,
+        tone: 'violet',
+      },
+      {
+        label: 'Avg Found Rate',
+        value: `${avgFoundRate.toFixed(1)}%`,
+        tone: 'emerald',
+        hint: `Median ${foundRateMedian.toFixed(1)}%`,
+      },
+      {
+        label: 'Avg Packing Time',
+        value: `${avgPackingTime.toFixed(1)} min`,
+        tone: 'amber',
+        hint: `Median ${packingTimeMedian.toFixed(1)} min`,
+      },
+    ];
+  }, [filteredStores]);
 
   const sortedStores = useMemo(() => {
     if (!sortKey) return [...filteredStores];
@@ -436,96 +559,113 @@ function StorePerformance() {
         )}
 
         {!loading && !error && stores.length > 0 && (
-          <div className="store-table-wrapper">
-            <div className="store-table-header">
-              <span>{filteredStores.length} stores</span>
-              <div className="store-table-actions">
-                <button type="button" className="download-button" onClick={handleDownloadCsv}>
-                  <span className="download-icon" aria-hidden="true">⬇︎</span>
-                  Download CSV
-                </button>
-                <label className="store-filter">
-                  <span>Period</span>
-                  <select
-                    value={selectedWindow}
-                    onChange={(e) => setSelectedWindow(e.target.value as WindowOption)}
-                  >
-                    {(Object.keys(WINDOW_LABELS) as WindowOption[]).map((w) => (
-                      <option key={w} value={w}>{WINDOW_LABELS[w]}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="store-filter">
-                  <span>State</span>
-                  <select
-                    value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
-                  >
-                    <option value="All">All</option>
-                    {Array.from(new Set(stores.map((s) => s.state).filter(Boolean)))
-                      .sort()
-                      .map((state) => (
-                        <option key={state} value={state}>{state}</option>
+          <>
+            <div className="store-insights-grid">
+              {insightCards.map((card) => {
+                const { main, unit } = splitValueAndUnit(card.value);
+                return (
+                  <article className={`store-insight-card tone-${card.tone}`} key={card.label}>
+                    <p className="store-insight-label">{card.label}</p>
+                    <p className="store-insight-value">
+                      <span className="store-insight-value-main">{main}</span>
+                      {unit ? <span className="store-insight-value-unit">{unit}</span> : null}
+                    </p>
+                    {card.hint ? <p className="store-insight-hint">{card.hint}</p> : null}
+                  </article>
+                );
+              })}
+            </div>
+            <div className="store-table-wrapper">
+              <div className="store-table-header">
+                <span>{filteredStores.length} stores</span>
+                <div className="store-table-actions">
+                  <button type="button" className="download-button" onClick={handleDownloadCsv}>
+                    <span className="download-icon" aria-hidden="true">⬇︎</span>
+                    Download CSV
+                  </button>
+                  <label className="store-filter">
+                    <span>Period</span>
+                    <select
+                      value={selectedWindow}
+                      onChange={(e) => setSelectedWindow(e.target.value as WindowOption)}
+                    >
+                      {(Object.keys(WINDOW_LABELS) as WindowOption[]).map((w) => (
+                        <option key={w} value={w}>{WINDOW_LABELS[w]}</option>
                       ))}
-                  </select>
-                </label>
+                    </select>
+                  </label>
+                  <label className="store-filter">
+                    <span>State</span>
+                    <select
+                      value={selectedState}
+                      onChange={(e) => setSelectedState(e.target.value)}
+                    >
+                      <option value="All">All</option>
+                      {Array.from(new Set(stores.map((s) => s.state).filter(Boolean)))
+                        .sort()
+                        .map((state) => (
+                          <option key={state} value={state}>{state}</option>
+                        ))}
+                    </select>
+                  </label>
+                </div>
               </div>
-            </div>
-            <div className="store-table-scroll">
-              <table className="store-table">
-                <thead>
-                  <tr>
-                    {renderSortableHeader('Store Code', 'store_code', undefined, 'asc')}
-                    <th>Store Name</th>
-                    {renderSortableHeader('Total Orders', 'total_orders')}
-                    {renderSortableHeader('Avg Packing Time', 'avg_packing_time')}
-                    {renderSortableHeader('Cancelled Orders', 'cancelled_orders')}
-                    {renderSortableHeader('Found Rate', 'found_rate')}
-                    {renderSortableHeader('Substituted Orders', 'substituted_orders')}
-                    {renderSortableHeader('Removal Rate', 'removal_rate')}
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageItems.map((store) => (
-                    <tr key={`${store.store_code}-${store.name}`}>
-                      <td>{store.store_code}</td>
-                      <td>{store.name}</td>
-                      {renderMetricCell(store.total_orders, store.total_orders_trend)}
-                      {renderMetricCell(store.avg_packing_time, store.avg_packing_time_trend)}
-                      {renderMetricCell(store.cancelled_orders, store.cancelled_orders_trend)}
-                      {renderMetricCell(store.found_rate, store.found_rate_trend)}
-                      {renderMetricCell(store.substituted_orders, store.substituted_orders_trend)}
-                      {renderMetricCell(store.removal_rate, store.removal_rate_trend)}
+              <div className="store-table-scroll">
+                <table className="store-table">
+                  <thead>
+                    <tr>
+                      {renderSortableHeader('Store Code', 'store_code', undefined, 'asc')}
+                      <th>Store Name</th>
+                      {renderSortableHeader('Total Orders', 'total_orders')}
+                      {renderSortableHeader('Avg Packing Time', 'avg_packing_time')}
+                      {renderSortableHeader('Cancelled Orders', 'cancelled_orders')}
+                      {renderSortableHeader('Found Rate', 'found_rate')}
+                      {renderSortableHeader('Substituted Orders', 'substituted_orders')}
+                      {renderSortableHeader('Removal Rate', 'removal_rate')}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="table-pagination">
-              <span className="pagination-info">
-                Showing {filteredStores.length === 0 ? 0 : pageStart + 1}–{Math.min(filteredStores.length, pageStart + PAGE_SIZE)} of {filteredStores.length}
-              </span>
-              <div className="pagination-controls">
-                <button type="button" onClick={() => setCurrentPage(1)} disabled={safePage === 1}>
-                  <span aria-hidden="true">«</span>
-                  <span className="sr-only">First</span>
-                </button>
-                <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}>
-                  <span aria-hidden="true">‹</span>
-                  <span className="sr-only">Previous</span>
-                </button>
-                <span className="pagination-page">Page {safePage} of {totalPages}</span>
-                <button type="button" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}>
-                  <span aria-hidden="true">›</span>
-                  <span className="sr-only">Next</span>
-                </button>
-                <button type="button" onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages}>
-                  <span aria-hidden="true">»</span>
-                  <span className="sr-only">Last</span>
-                </button>
+                  </thead>
+                  <tbody>
+                    {pageItems.map((store) => (
+                      <tr key={`${store.store_code}-${store.name}`}>
+                        <td>{store.store_code}</td>
+                        <td>{store.name}</td>
+                        {renderMetricCell(store.total_orders, store.total_orders_trend)}
+                        {renderMetricCell(store.avg_packing_time, store.avg_packing_time_trend)}
+                        {renderMetricCell(store.cancelled_orders, store.cancelled_orders_trend)}
+                        {renderMetricCell(store.found_rate, store.found_rate_trend)}
+                        {renderMetricCell(store.substituted_orders, store.substituted_orders_trend)}
+                        {renderMetricCell(store.removal_rate, store.removal_rate_trend)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="table-pagination">
+                <span className="pagination-info">
+                  Showing {filteredStores.length === 0 ? 0 : pageStart + 1}–{Math.min(filteredStores.length, pageStart + PAGE_SIZE)} of {filteredStores.length}
+                </span>
+                <div className="pagination-controls">
+                  <button type="button" onClick={() => setCurrentPage(1)} disabled={safePage === 1}>
+                    <span aria-hidden="true">«</span>
+                    <span className="sr-only">First</span>
+                  </button>
+                  <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}>
+                    <span aria-hidden="true">‹</span>
+                    <span className="sr-only">Previous</span>
+                  </button>
+                  <span className="pagination-page">Page {safePage} of {totalPages}</span>
+                  <button type="button" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}>
+                    <span aria-hidden="true">›</span>
+                    <span className="sr-only">Next</span>
+                  </button>
+                  <button type="button" onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages}>
+                    <span aria-hidden="true">»</span>
+                    <span className="sr-only">Last</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )}
       </main>
     </div>
