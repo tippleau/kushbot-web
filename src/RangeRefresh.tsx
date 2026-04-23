@@ -5,30 +5,30 @@ import { useNavigate } from 'react-router-dom';
 function RangeRefresh() {
   const navigate = useNavigate();
   const [blueYonderFile, setBlueYonderFile] = useState<File | null>(null);
-  // const [ecommerceFile, setEcommerceFile] = useState<File | null>(null);
+  const [ecommerceFile, setEcommerceFile] = useState<File | null>(null);
   // const [salesOrderFile, setSalesOrderFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [uploading, setUploading] = useState<{
     blueYonder: boolean;
-    // ecommerce: boolean;
+    ecommerce: boolean;
     // salesOrder: boolean;
-  }>({ blueYonder: false /*, ecommerce: false, salesOrder: false*/ });
+  }>({ blueYonder: false, ecommerce: false /*, salesOrder: false*/ });
   const [completed, setCompleted] = useState<{
     blueYonder: boolean;
-    // ecommerce: boolean;
+    ecommerce: boolean;
     // salesOrder: boolean;
-  }>({ blueYonder: false /*, ecommerce: false, salesOrder: false*/ });
+  }>({ blueYonder: false, ecommerce: false /*, salesOrder: false*/ });
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadSpeed, setUploadSpeed] = useState<number>(0);
   const [uploadedBytes, setUploadedBytes] = useState<number>(0);
   const [totalBytes, setTotalBytes] = useState<number>(0);
   const [funMessage, setFunMessage] = useState<string>('');
   const blueYonderInputRef = React.useRef<HTMLInputElement>(null);
-  // const ecommerceInputRef = React.useRef<HTMLInputElement>(null);
+  const ecommerceInputRef = React.useRef<HTMLInputElement>(null);
   // const salesOrderInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, fileType: 'blueYonder' /*| 'ecommerce' | 'salesOrder'*/) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, fileType: 'blueYonder' | 'ecommerce' /*| 'salesOrder'*/) => {
     setError('');
     setSuccess('');
 
@@ -40,7 +40,7 @@ function RangeRefresh() {
 
       if (validTypes.includes(file.type) || validExtensions.includes(fileExtension)) {
         if (fileType === 'blueYonder') setBlueYonderFile(file);
-        // else if (fileType === 'ecommerce') setEcommerceFile(file);
+        else if (fileType === 'ecommerce') setEcommerceFile(file);
         // else if (fileType === 'salesOrder') setSalesOrderFile(file);
       } else {
         setError('Please upload only CSV files (.csv)');
@@ -62,7 +62,7 @@ function RangeRefresh() {
     "✨ Adding some magic to your data...",
   ];
 
-  const uploadToS3 = async (file: File, fileName: string, fileType: 'blueYonder' /*| 'ecommerce' | 'salesOrder'*/) => {
+  const uploadToS3 = async (file: File, fileName: string, fileType: 'blueYonder' | 'ecommerce' /*| 'salesOrder'*/) => {
     try {
       setTotalBytes(file.size);
       setUploadedBytes(0);
@@ -142,11 +142,11 @@ function RangeRefresh() {
       if (fileType === 'blueYonder') {
         setBlueYonderFile(null);
         if (blueYonderInputRef.current) blueYonderInputRef.current.value = '';
+      } else if (fileType === 'ecommerce') {
+        setEcommerceFile(null);
+        if (ecommerceInputRef.current) ecommerceInputRef.current.value = '';
       }
-      // else if (fileType === 'ecommerce') {
-      //   setEcommerceFile(null);
-      //   if (ecommerceInputRef.current) ecommerceInputRef.current.value = '';
-      // } else if (fileType === 'salesOrder') {
+      // else if (fileType === 'salesOrder') {
       //   setSalesOrderFile(null);
       //   if (salesOrderInputRef.current) salesOrderInputRef.current.value = '';
       // }
@@ -168,7 +168,7 @@ function RangeRefresh() {
     }
   };
 
-  const handleUpload = (file: File, fileName: string, fileType: 'blueYonder' /*| 'ecommerce' | 'salesOrder'*/) => {
+  const handleUpload = (file: File, fileName: string, fileType: 'blueYonder' | 'ecommerce' /*| 'salesOrder'*/) => {
     setError('');
     setSuccess('');
     setUploading((prev) => ({ ...prev, [fileType]: true }));
@@ -234,7 +234,7 @@ function RangeRefresh() {
         )}
 
         {/* Upload Progress Overlay */}
-        {(uploading.blueYonder /*|| uploading.ecommerce || uploading.salesOrder*/) && uploadProgress > 0 && (
+        {(uploading.blueYonder || uploading.ecommerce /*|| uploading.salesOrder*/) && uploadProgress > 0 && (
           <div className="upload-progress-overlay">
             <div className="upload-progress-container">
               <h2 className="upload-title">Uploading Your Files</h2>
@@ -332,7 +332,7 @@ function RangeRefresh() {
           </div>
 
           {/* Step 2: eCommerce Price File */}
-          {/* <div className={`file-card ${!completed.blueYonder ? 'disabled' : ''} ${completed.ecommerce ? 'completed' : ''}`}>
+          <div className={`file-card ${!completed.blueYonder ? 'disabled' : ''} ${completed.ecommerce ? 'completed' : ''}`}>
             <div className="step-number">Step 2</div>
             <div className="file-card-icon">💰</div>
             <h3 className="file-card-title">eCommerce Price File</h3>
@@ -384,7 +384,7 @@ function RangeRefresh() {
                 <span>Completed</span>
               </div>
             )}
-          </div> */}
+          </div>
 
           {/* Step 3: Sales & Order File */}
           {/* <div className={`file-card ${!completed.ecommerce ? 'disabled' : ''} ${completed.salesOrder ? 'completed' : ''}`}>
