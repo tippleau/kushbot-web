@@ -331,60 +331,60 @@ function RangeRefresh() {
             )}
           </div>
 
-          {/* Step 2: eCommerce Price File */}
-          <div className={`file-card ${!completed.blueYonder ? 'disabled' : ''} ${completed.ecommerce ? 'completed' : ''}`}>
-            <div className="step-number">Step 2</div>
-            <div className="file-card-icon">💰</div>
-            <h3 className="file-card-title">eCommerce Price File</h3>
-            <p className="file-card-description">
-              {!completed.blueYonder ? 'Complete Step 1 first' : 'Upload your eCommerce pricing file'}
-            </p>
+          {/*/!* Step 2: eCommerce Price File *!/*/}
+          {/*<div className={`file-card ${!completed.blueYonder ? 'disabled' : ''} ${completed.ecommerce ? 'completed' : ''}`}>*/}
+          {/*  <div className="step-number">Step 2</div>*/}
+          {/*  <div className="file-card-icon">💰</div>*/}
+          {/*  <h3 className="file-card-title">eCommerce Price File</h3>*/}
+          {/*  <p className="file-card-description">*/}
+          {/*    {!completed.blueYonder ? 'Complete Step 1 first' : 'Upload your eCommerce pricing file'}*/}
+          {/*  </p>*/}
 
-            {!completed.ecommerce ? (
-              <>
-                <input
-                  type="file"
-                  id="ecommerce-upload"
-                  ref={ecommerceInputRef}
-                  onChange={(e) => handleFileChange(e, 'ecommerce')}
-                  accept=".csv"
-                  className="file-input"
-                  disabled={!completed.blueYonder}
-                />
-                <label
-                  htmlFor="ecommerce-upload"
-                  className={`file-label-card ${!completed.blueYonder ? 'disabled' : ''}`}
-                >
-                  <span className="file-icon">📁</span>
-                  <span className="file-text">{ecommerceFile ? ecommerceFile.name : 'Choose file'}</span>
-                </label>
+          {/*  {!completed.ecommerce ? (*/}
+          {/*    <>*/}
+          {/*      <input*/}
+          {/*        type="file"*/}
+          {/*        id="ecommerce-upload"*/}
+          {/*        ref={ecommerceInputRef}*/}
+          {/*        onChange={(e) => handleFileChange(e, 'ecommerce')}*/}
+          {/*        accept=".csv"*/}
+          {/*        className="file-input"*/}
+          {/*        disabled={!completed.blueYonder}*/}
+          {/*      />*/}
+          {/*      <label*/}
+          {/*        htmlFor="ecommerce-upload"*/}
+          {/*        className={`file-label-card ${!completed.blueYonder ? 'disabled' : ''}`}*/}
+          {/*      >*/}
+          {/*        <span className="file-icon">📁</span>*/}
+          {/*        <span className="file-text">{ecommerceFile ? ecommerceFile.name : 'Choose file'}</span>*/}
+          {/*      </label>*/}
 
-                {ecommerceFile && completed.blueYonder && (
-                  <button
-                    onClick={() => handleUpload(ecommerceFile, 'ecommerce_file.csv', 'ecommerce')}
-                    className="upload-button-card"
-                    disabled={uploading.ecommerce}
-                  >
-                    {uploading.ecommerce ? (
-                      <>
-                        <span className="spinner"></span>
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <span>⬆️</span> Upload
-                      </>
-                    )}
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="completed-badge">
-                <span className="check-icon">✓</span>
-                <span>Completed</span>
-              </div>
-            )}
-          </div>
+          {/*      {ecommerceFile && completed.blueYonder && (*/}
+          {/*        <button*/}
+          {/*          onClick={() => handleUpload(ecommerceFile, 'ecommerce_file.csv', 'ecommerce')}*/}
+          {/*          className="upload-button-card"*/}
+          {/*          disabled={uploading.ecommerce}*/}
+          {/*        >*/}
+          {/*          {uploading.ecommerce ? (*/}
+          {/*            <>*/}
+          {/*              <span className="spinner"></span>*/}
+          {/*              Uploading...*/}
+          {/*            </>*/}
+          {/*          ) : (*/}
+          {/*            <>*/}
+          {/*              <span>⬆️</span> Upload*/}
+          {/*            </>*/}
+          {/*          )}*/}
+          {/*        </button>*/}
+          {/*      )}*/}
+          {/*    </>*/}
+          {/*  ) : (*/}
+          {/*    <div className="completed-badge">*/}
+          {/*      <span className="check-icon">✓</span>*/}
+          {/*      <span>Completed</span>*/}
+          {/*    </div>*/}
+          {/*  )}*/}
+          {/*</div>*/}
 
           {/* Step 3: Sales & Order File */}
           {/* <div className={`file-card ${!completed.ecommerce ? 'disabled' : ''} ${completed.salesOrder ? 'completed' : ''}`}>
