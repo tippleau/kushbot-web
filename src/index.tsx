@@ -8,6 +8,7 @@ import MonthlyPromoPlan from './MonthlyPromoPlan';
 import RangeRefresh from './RangeRefresh';
 import StockInvoiceUpload from './StockInvoiceUpload';
 import StorePerformance from './StorePerformance';
+import ProductEnrichment from './ProductEnrichment';
 import ErrorBoundary from './ErrorBoundary';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -27,6 +28,7 @@ root.render(
           <Route path="/range-refresh" element={<RangeRefresh />} />
           <Route path="/stock-invoice-upload" element={<StockInvoiceUpload />} />
           <Route path="/store-performance" element={<StorePerformance />} />
+          <Route path="/product-enrichment" element={<ProductEnrichment />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
