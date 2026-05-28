@@ -27,6 +27,7 @@ function App() {
             <h2 className="menu-heading">Insights</h2>
             <ul className="menu">
               <li className="menu-item"><a onClick={() => navigate('/store-performance')}>📊 Store Performance</a></li>
+              <li className="menu-item"><a onClick={() => navigate('/product-enrichment')}>🏷️ Product Enrichment</a></li>
             </ul>
           </div>
         </nav>
