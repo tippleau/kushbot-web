@@ -67,6 +67,23 @@ function ProductEnrichment() {
               ⬇︎ Download
             </a>
           </div>
+          <div className="enrichment-card">
+            <div className="enrichment-card-icon">🗂️</div>
+            <div className="enrichment-card-body">
+              <p className="enrichment-card-title">
+                Master File with Variation Data
+                <span className="enrichment-card-badge badge-xlsx">XLSX</span>
+              </p>
+              <p className="enrichment-card-desc">Full product catalogue including size, brand and variation names to help with DoorDash Greenpipe solution</p>
+            </div>
+            <a
+                href="https://content.tipple.com.au/tipple/ai-catalogue-enrichment/master/enriched_master_file_with_variations.xlsx"
+                download
+                className="enrichment-download-btn"
+            >
+              ⬇︎ Download
+            </a>
+          </div>
         </div>
       </main>
     </div>
